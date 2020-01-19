@@ -4,7 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "./node_modules/.bin/netlify-lambda serve src",
+    "build": "./node_modules/.bin/netlify-lambda build src",
     "server": "nodemon server.js"
   },
   "keywords": [],
@@ -15,7 +16,9 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "express-validator": "^6.3.1",
-    "mongoose": "^5.8.7"
+    "mongoose": "^5.8.7",
+    "netlify-lambda": "^1.6.3",
+    "serverless-http": "^2.3.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.2"
