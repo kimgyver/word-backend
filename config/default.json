@@ -1,0 +1,4 @@
+{
+  "mongoURI": "mongodb+srv://english:english@cluster0-5xua6.mongodb.net/english?retryWrites=true&w=majority",
+  "jwtSecret": "secret"
+}
