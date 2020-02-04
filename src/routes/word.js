@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
-// const User = require('../models/User');
-// const auth = require('../middleware/auth');
 const Word = require('../models/Word');
+const auth = require('../middleware/auth');
 
-const getOptions = reqQuery => {
+const getSortOptions = reqQuery => {
   const orderOptions = {
     'Priority (1 > 2 > 3)': ['priority', 'asc'],
     'Updated Time': ['updatedAt', 'desc'],
@@ -14,10 +13,6 @@ const getOptions = reqQuery => {
   };
 
   if (reqQuery.random) return 'random';
-
-  // console.log(orderOptions[reqQuery.order1]);
-  // console.log(orderOptions[reqQuery.order2]);
-  // console.log(orderOptions[reqQuery.order3]);
 
   let sortOptions = [];
   if (orderOptions[reqQuery.order1] !== undefined) {
@@ -48,15 +43,35 @@ const shuffleArray = array => {
   return array;
 };
 
-// @route   GET /api/words
+// @route   GET /api/word
 // @desc    Get all words
 // @access  Private
-router.get('/', async (req, res) => {
+router.get('/word/', auth, async (req, res) => {
+  // console.log(
+  //   'REQ.USER,ID ---> ',
+  //   req.user !== null && req.user !== undefined ? req.user.id : null
+  // );
+
   //console.log(req.query);
-  let sortOptions = getOptions(req.query);
+  let sortOptions = getSortOptions(req.query);
   try {
-    // console.log(sortOptions);
-    let words = await Word.find().sort(sortOptions);
+    let condition = [];
+    if (req.user.role === 'Admin') {
+      // all
+    } else {
+      //condition.push({ owner: { $eq: null } });
+      if (req.user !== '') {
+        condition.push({ owner: { $in: req.user.friends } });
+        condition.push({ owner: { $eq: req.user.id } });
+      } else {
+        return getWordsForGuests(req, res);
+      }
+    }
+    //console.log('CONDITION ===========>', condition);
+    const finalCondition = condition.length !== 0 ? { $or: condition } : null;
+    let words = await Word.find(finalCondition)
+      .populate('owner', 'name')
+      .sort(sortOptions);
     if (sortOptions === 'random') words = shuffleArray(words);
 
     res.json(words);
@@ -66,15 +81,45 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @route   POST /api/words
+const getWordsForGuests = async (req, res) => {
+  try {
+    let words = await Word.aggregate([
+      { $sample: { size: 15 } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'owner',
+          foreignField: '_id',
+          as: 'owner'
+        }
+      },
+      {
+        $project: {
+          'owner.password': 0
+        }
+      },
+      { $unwind: '$owner' }
+    ]);
+
+    res.json(words);
+  } catch (err) {
+    console.error(err.message);
+    res.send('Server Error');
+  }
+};
+
+// @route   POST /api/word
 // @desc    Add new word
 // @access  Private
 router.post(
-  '/',
+  '/word/',
   [
-    check('text')
-      .not()
-      .isEmpty()
+    auth,
+    [
+      check('text')
+        .not()
+        .isEmpty()
+    ]
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -83,15 +128,27 @@ router.post(
     }
 
     try {
-      const { text, definition, synonyms, examples, priority } = req.body;
+      const {
+        text,
+        definition,
+        synonyms,
+        examples,
+        priority,
+        origins
+      } = req.body;
+
+      const userId = req.user !== '' ? req.user.id : null;
       const newWord = new Word({
         text,
         definition,
         synonyms,
         examples,
-        priority
+        priority,
+        owner: userId,
+        origins
       });
-      const word = await newWord.save();
+      let word = await newWord.save();
+      word = await Word.findById(word._id).populate('owner', 'name');
       res.json({ word });
     } catch (err) {
       console.error(err.message);
@@ -100,15 +157,18 @@ router.post(
   }
 );
 
-// @route   PUT /api/words/:id
+// @route   PUT /api/word/:id
 // @desc    Update word
 // @access  Private
 router.put(
-  '/:id',
+  '/word/:id',
   [
-    check('text')
-      .not()
-      .isEmpty()
+    auth,
+    [
+      check('text')
+        .not()
+        .isEmpty()
+    ]
   ],
   async (req, res) => {
     const { text, definition, synonyms, examples, priority } = req.body;
@@ -127,15 +187,21 @@ router.put(
       if (!word) return res.status(404).json({ msg: 'Word not found' });
 
       // make sure that user owns word
-      // if (word.user.toString() !== req.user.id) {
-      //   return res.status(401).json({ msg: 'Not authorized.' });
-      // }
+      if (req.user.role !== 'Admin') {
+        if (
+          word.owner === null ||
+          word.owner === undefined ||
+          word.owner.toString() !== req.user.id
+        ) {
+          return res.status(401).json({ msg: 'Not authorized.' });
+        }
+      }
 
       word = await Word.findByIdAndUpdate(
         req.params.id,
         { $set: wordFields },
         { new: true }
-      );
+      ).populate('owner', 'name');
 
       res.json(word);
     } catch (err) {
@@ -145,18 +211,24 @@ router.put(
   }
 );
 
-// @route   DELETE /api/words/:id
+// @route   DELETE /api/word/:id
 // @desc    Delete word
 // @access  Private
-router.delete('/:id', async (req, res) => {
+router.delete('/word/:id', auth, async (req, res) => {
   try {
     let word = await Word.findById(req.params.id);
     if (!word) return res.status(404).json({ msg: 'Word not found' });
 
     // make sure that user owns word
-    // if (word.user.toString() !== req.user.id) {
-    //     return res.status(401).json({msg: 'Not authorized.'});
-    // }
+    if (req.user.role !== 'Admin') {
+      if (
+        word.owner === null ||
+        word.owner === undefined ||
+        word.owner.toString() !== req.user.id
+      ) {
+        return res.status(401).json({ msg: 'Not authorized.' });
+      }
+    }
 
     word = await Word.findByIdAndRemove(req.params.id);
     res.json({ msg: 'Word removed' });

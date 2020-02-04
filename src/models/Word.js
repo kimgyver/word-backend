@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const Word = mongoose.Schema({
+var Schema = mongoose.Schema;
+const Word = Schema({
   text: {
     type: String,
     required: true
@@ -26,6 +27,10 @@ const Word = mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  owner: { type: Schema.Types.ObjectId, ref: 'User' },
+  origins: {
+    type: [String]
   }
 });
 

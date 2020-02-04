@@ -1,5 +1,5 @@
 const express = require('express');
-const connectDB = require('./config/db');
+const connectDB = require('./db');
 const path = require('path');
 const cors = require('cors');
 const serverless = require('serverless-http');
@@ -11,7 +11,6 @@ var corsOptions = {
   methods: 'GET,HEAD,PUT,PATCH,POST, DELETE, OPTIONS',
   preflightContinue: true,
   optionsSuccessStatus: 204
-  //   exposedHeaders: 'x-auth-token'
 };
 
 // Connect DB
@@ -29,6 +28,8 @@ app.use(cors(corsOptions));
 
 //app.use('/api/words', require('./routes/word'));
 app.use('/.netlify/functions/api', require('./routes/word'));
+app.use('/.netlify/functions/api', require('./routes/user'));
+app.use('/.netlify/functions/api', require('./routes/auth'));
 //app.use('/api/words', require('./routes/word'));
 
 // app.use(cors());
