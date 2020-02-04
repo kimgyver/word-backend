@@ -18,8 +18,10 @@ module.exports = async function(req, res, next) {
   }
 
   try {
+    console.log('token-->', token);
     //const decoded = jwt.verify(token, config.get('jwtSecret'));
     const decoded = jwt.verify(token, 'secret');
+    console.log('decoded-->', decoded);
 
     req.user = decoded.user;
     let user = await User.findOne({ _id: req.user.id });
