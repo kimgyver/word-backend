@@ -18,7 +18,8 @@ module.exports = async function(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, config.get('jwtSecret'));
+    //const decoded = jwt.verify(token, config.get('jwtSecret'));
+    const decoded = jwt.verify(token, 'secret');
 
     req.user = decoded.user;
     let user = await User.findOne({ _id: req.user.id });
