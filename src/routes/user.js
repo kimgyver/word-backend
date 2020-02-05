@@ -109,12 +109,14 @@ router.put('/user/:id', auth, async (req, res) => {
   const { friends } = req.body;
 
   // build user object
-  const userFields = {};
-  if (friends) userFields.friends = friends;
-  userFields.updatedAt = Date.now();
+  // const userFields = {};
+  // if (friends) userFields.friends = friends;
+  // userFields.updatedAt = Date.now();
+
   try {
     let user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
+
     // make sure that user is eligible
     if (req.user.role !== 'Admin') {
       if (user._id.toString() !== req.user.id) {
@@ -123,6 +125,7 @@ router.put('/user/:id', auth, async (req, res) => {
     }
 
     user.friends = friends;
+    user.updatedAt = Date.now();
     await user.save();
     user.password = undefined;
     res.json(user);
