@@ -121,13 +121,19 @@ router.put('/user/:id', auth, async (req, res) => {
         return res.status(401).json({ msg: 'Not authorized.' });
       }
     }
-    user = await User.findByIdAndUpdate(
-      req.params.id,
-      { $set: userFields },
-      { new: true }
-    );
 
+    user.friends = friends;
+    await user.save();
+    user.password = undefined;
     res.json(user);
+
+    // user = await User.findByIdAndUpdate(
+    //   req.params.id,
+    //   { $set: userFields },
+    //   { new: true }
+    // );
+
+    // res.json(user);
   } catch (err) {
     console.error(err.message);
     res.send('Server Error');
