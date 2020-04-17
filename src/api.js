@@ -21,6 +21,7 @@ app.use(express.json({ extended: false }));
 app.get('/', (req, res) => res.json({ msg: 'Welcome to the Words API...' }));
 
 app.use(cors(corsOptions));
+app.options('*', cors())
 
 // Define Routes
 // app.use('/api/users', require('./routes/users'));
