@@ -7,7 +7,7 @@ const serverless = require('serverless-http');
 const app = express();
 
 var corsOptions = {
-  origin: '*',
+  origin: 'https://word-jason.netlify.app',
   methods: 'GET,HEAD,PUT,PATCH,POST, DELETE, OPTIONS',
   preflightContinue: true,
   optionsSuccessStatus: 204
